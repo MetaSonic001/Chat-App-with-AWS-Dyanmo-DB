@@ -1,0 +1,42 @@
+# aws/template.yaml
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Chat Application API'
+
+Resources:
+  GetMessagesFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: getMessages.handler
+      Runtime: nodejs18.x
+      CodeUri: ./functions/
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: 'ChatMessages'
+      Events:
+        GetMessages:
+          Type: Api
+          Properties:
+            Path: /messages
+            Method: get
+
+  SendMessageFunction:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      Handler: sendMessage.handler
+      Runtime: nodejs18.x
+      CodeUri: ./functions/
+      Policies:
+        - DynamoDBWritePolicy:
+            TableName: 'ChatMessages'
+      Events:
+        SendMessage:
+          Type: Api
+          Properties:
+            Path: /messages
+            Method: post
+
+Outputs:
+  ApiEndpoint:
+    Description: "API Gateway endpoint URL"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
