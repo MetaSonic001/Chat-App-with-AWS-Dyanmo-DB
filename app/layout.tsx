@@ -1,23 +1,20 @@
-// src/app/layout.tsx
-import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
 
-const inter = Inter({ subsets: ['latin'] })
+import "./globals.css";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Real-time Chat App',
-  description: 'A simple chat application using Next.js and AWS',
-}
+  title: "Simple Chat App",
+  description: "A simple chat application using Next.js and DynamoDB",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body>{children}</body>
     </html>
-  )
+  );
 }

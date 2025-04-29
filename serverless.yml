@@ -1,0 +1,30 @@
+service: chat-app-api
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  region: ${env:AWS_REGION}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:PutItem
+      Resource: 
+        - "arn:aws:dynamodb:${env:AWS_REGION}:*:table/ChatMessages"
+
+functions:
+  getMessages:
+    handler: app/api/messages/route.GET
+    events:
+      - http:
+          path: api/messages
+          method: get
+          cors: true
+  
+  sendMessage:
+    handler: app/api/send-message/route.POST
+    events:
+      - http:
+          path: api/send-message
+          method: post
+          cors: true
