@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Loader,
   AlertCircle,
+  Bot
 } from "lucide-react";
 import { v4 as uuidv4 } from "uuid";
 
@@ -26,6 +27,7 @@ export default function ChatInterface() {
   const [loading, setLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sendingMessage, setSendingMessage] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -52,7 +54,7 @@ export default function ChatInterface() {
         throw new Error(errorData.error || "Failed to fetch messages");
       }
       const data = await response.json();
-      setMessages(data.messages || []);
+      setMessages(data.items || []);
     } catch (err) {
       console.error("Fetch error:", err);
       setError("Failed to load messages. Please check your DynamoDB connection.");
@@ -63,9 +65,10 @@ export default function ChatInterface() {
 
   async function sendMessage(e: React.FormEvent | React.MouseEvent) {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || sendingMessage) return;
 
     setError(null);
+    setSendingMessage(true);
 
     const tempMessage: ChatMessage = {
       messageId: uuidv4(),
@@ -94,11 +97,29 @@ export default function ChatInterface() {
         throw new Error(errData.error || "Failed to send message");
       }
 
+      // Now get a response from Groq
+      const groqRes = await fetch("/api/messages/groq-response", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          conversationId,
+          userMessage: newMessage,
+          previousMessages: messages.slice(-5)  // Send last 5 messages for context
+        }),
+      });
+
+      if (!groqRes.ok) {
+        const errData = await groqRes.json();
+        throw new Error(errData.error || "Failed to get Groq response");
+      }
+      
       fetchMessages(); // Refresh with real messages from backend
     } catch (err) {
       console.error("Send error:", err);
-      setError("Failed to send message. Please check your DynamoDB connection.");
+      setError("Failed to send message or get AI response. Please check your connections.");
       setMessages(prev => prev.filter(msg => msg.messageId !== tempMessage.messageId));
+    } finally {
+      setSendingMessage(false);
     }
   }
 
@@ -109,11 +130,27 @@ export default function ChatInterface() {
     }
   };
 
-  const formatTime = (timestamp: number) =>
-    new Date(timestamp).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatTime = (timestamp: number | string) => {
+    try {
+      // Handle ISO string or number timestamp or any other format
+      const date = typeof timestamp === 'string' 
+        ? new Date(timestamp) 
+        : new Date(timestamp);
+      
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return 'Invalid time';
+      }
+      
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      console.error("Error formatting time:", error);
+      return 'Unknown time';
+    }
+  };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
@@ -193,6 +230,7 @@ export default function ChatInterface() {
           <>
             {messages.map((msg, index) => {
               const isUser = msg.sender === sender;
+              const isAI = msg.sender === "Groq";
               const showAvatar = index === 0 || messages[index - 1].sender !== msg.sender;
 
               return (
@@ -201,20 +239,22 @@ export default function ChatInterface() {
                     {showAvatar && (
                       <div
                         className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-semibold
-                        ${isUser ? "bg-blue-500 text-white" : "bg-gray-300 text-gray-700"}`}
+                        ${isUser ? "bg-blue-500 text-white" : isAI ? "bg-green-500 text-white" : "bg-gray-300 text-gray-700"}`}
                       >
-                        {msg.sender.charAt(0).toUpperCase()}
+                        {isAI ? <Bot size={16} /> : msg.sender.charAt(0).toUpperCase()}
                       </div>
                     )}
                     <div
                       className={`p-3 rounded-lg ${
                         isUser
                           ? "bg-blue-500 text-white rounded-br-none"
-                          : "bg-white border border-gray-200 rounded-bl-none"
+                          : isAI
+                            ? "bg-green-100 text-gray-800 rounded-bl-none"
+                            : "bg-gray-100 text-gray-800 border border-gray-200 rounded-bl-none"
                       }`}
                     >
                       <p className="mb-1">{msg.message}</p>
-                      <p className={`text-xs ${isUser ? "text-blue-100" : "text-gray-500"}`}>
+                      <p className={`text-xs ${isUser ? "text-blue-100" : isAI ? "text-green-700" : "text-gray-500"}`}>
                         {formatTime(msg.timestamp)}
                       </p>
                     </div>
@@ -238,15 +278,16 @@ export default function ChatInterface() {
             onKeyDown={handleKeyDown}
             placeholder="Type your message..."
             className="flex-1 p-3 border border-gray-300 rounded-full focus:ring-2 focus:ring-blue-500"
+            disabled={sendingMessage}
           />
           <button
             onClick={sendMessage}
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || sendingMessage}
             className={`p-3 rounded-full text-white transition-colors ${
-              newMessage.trim() ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-300"
+              newMessage.trim() && !sendingMessage ? "bg-blue-500 hover:bg-blue-600" : "bg-gray-300"
             }`}
           >
-            <Send size={20} />
+            {sendingMessage ? <Loader size={20} className="animate-spin" /> : <Send size={20} />}
           </button>
         </div>
       </div>

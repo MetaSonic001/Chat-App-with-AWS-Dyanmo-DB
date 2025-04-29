@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { addMessage, ChatMessage } from "@/lib/dynamo";
 import { v4 as uuidv4 } from "uuid";
+import { handleError } from "@/lib/errorHandler";
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,13 +20,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Message cannot be empty" }, { status: 400 });
     }
 
-    // Create a new message object
+    // Create a new message object with ISO string timestamp
     const newMessage: ChatMessage = {
       messageId: uuidv4(), // Generate a unique ID
       conversationId: body.conversationId,
       sender: body.sender,
       message: body.message,
-      timestamp: Date.now()
+      timestamp: new Date().toISOString() // Store as ISO string for consistent handling
     };
 
     // Save the message to DynamoDB
@@ -35,20 +36,8 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error("Error adding message:", error);
     
-    // Provide more specific error message based on error type
-    let errorMessage = "Failed to send message";
+    const errorResponse = handleError(error, "Failed to send message");
     
-    if (error.name === "CredentialsProviderError") {
-      errorMessage = "AWS credentials not found or invalid";
-    } else if (error.name === "ResourceNotFoundException") {
-      errorMessage = "DynamoDB table not found";
-    } else if (error.code === "ENOTFOUND") {
-      errorMessage = `Cannot connect to DynamoDB endpoint: ${error.hostname}`;
-    }
-    
-    return NextResponse.json({ 
-      error: errorMessage,
-      details: error.message 
-    }, { status: 500 });
+    return NextResponse.json(errorResponse, { status: 500 });
   }
 }
