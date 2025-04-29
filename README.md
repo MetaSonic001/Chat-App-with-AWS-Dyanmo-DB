@@ -1,36 +1,77 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Chat Application with DynamoDB and Groq AI
 
-## Getting Started
+This application is a real-time chat system that uses Amazon DynamoDB for message storage and Groq AI for automated responses.
 
-First, run the development server:
+## Features
+
+- Chat messaging with persistent storage in DynamoDB
+- AI responses from Groq API
+- Conversation history viewing
+- Multiple conversation support with conversation IDs
+- Responsive UI with proper message styling
+
+## Setup Instructions
+
+### 1. Configure AWS DynamoDB
+
+First, create a DynamoDB table with the following configuration:
+
+- Table Name: `ChatMessages` (or specify your own in .env)
+- Partition Key: `conversationId` (String)
+- Sort Key: `timestamp` (Number)
+
+### 2. Configure Environment Variables
+
+Copy the `.env.local` file and fill in your credentials:
+
+```bash
+# AWS Configuration
+AWS_REGION=ap-south-1
+AWS_ACCESS_KEY_ID=your_access_key_id
+AWS_SECRET_ACCESS_KEY=your_secret_access_key
+
+# DynamoDB Configuration
+DYNAMODB_MESSAGES_TABLE=ChatMessages
+
+# Groq API Configuration
+GROQ_API_KEY=your_groq_api_key
+```
+
+### 3. Install Dependencies
+
+```bash
+npm install
+# or
+yarn install
+```
+
+### 4. Run the Development Server
 
 ```bash
 npm run dev
 # or
 yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/components` - React components including the ChatInterface
+- `/app/api/messages` - API routes for message handling
+- `/lib` - Utility functions for DynamoDB and Groq API
 
-## Learn More
+## Troubleshooting
 
-To learn more about Next.js, take a look at the following resources:
+If you encounter issues:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Check your AWS credentials and permissions
+2. Ensure the DynamoDB table is correctly configured
+3. Verify your Groq API key is valid
+4. Check browser console and server logs for errors
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Security Notes
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Never commit your `.env.local` file
+- Consider using proper authentication for a production app
+- Set up IAM roles with least privilege for DynamoDB access
